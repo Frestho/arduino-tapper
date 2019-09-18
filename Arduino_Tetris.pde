@@ -4,7 +4,7 @@ Arduino arduino;
 int w = 10;
 int h = 20;
 int q = 20;//blocks width and height
-int dt;// delay between each move
+double dt;// delay between each move
 int currentTime;
 Grid grid;
 Piece piece;
@@ -18,7 +18,7 @@ boolean releasedL;
 boolean releasedR;
 int txtSize = 20;
 int textColor = color(34, 230, 190);
-
+boolean previousSwitch;
 Boolean gameOver = false;
 Boolean gameOn = false;
 
@@ -26,7 +26,7 @@ void setup()
 {
   size(600, 480, P2D);
   textSize(20);
-  arduino = new Arduino(this, Arduino.list()[0], 57600); //change the [0] to a [1] or [2] etc. if your program doesn't work
+  arduino = new Arduino(this, Arduino.list()[0], 57600);
 }
 
 void initialize() {
@@ -44,7 +44,7 @@ void initialize() {
 void draw()
 {
   background(60);
-
+  dt = dt*3999/4000;
   if(grid != null){
     grid.drawGrid();
     int now = millis();
@@ -56,20 +56,36 @@ void draw()
     }
     piece.display(false);
     score.display();
+    if(arduino.analogRead(6) > 500 && releasedL) {
+      piece.inputKey(37);
+      releasedL = false;
+    }
+    if(!(arduino.analogRead(6) > 500)) {
+      releasedL = true;
+    }
+    if(arduino.analogRead(1) > 500 && releasedR) {
+      piece.inputKey(39);
+      releasedR = false;
+    }
+    if(!(arduino.analogRead(1) > 500)) {
+      releasedR = true;
+    }
+    if((arduino.analogRead(3) == 1023 && !previousSwitch) || (arduino.analogRead(3) == 0 && previousSwitch)) {
+      piece.inputKey(38);
+      System.out.println("switched");
+    }
+    if(arduino.analogRead(3) == 1023) {
+      previousSwitch = true;
+    }
+    if(arduino.analogRead(3) == 0) {
+      previousSwitch = false;
+    }
   }
-  if(arduino.analogRead(6) > 500 && releasedL) {
-    piece.inputKey(38);
-    releasedL = false;
-  }
-  if(!(arduino.analogRead(6) > 500)) {
-    releasedL = true;
-  }
-  if(arduino.analogRead(1) > 500 && releasedR) {
-    piece.inputKey(39);
-    releasedR = false;
-  }
-  if(!(arduino.analogRead(1) > 500)) {
-    releasedR = true;
+  if(arduino.analogRead(1) > 500 && !gameOn) {
+     initialize();
+      //soundGameStart();
+      gameOver = false;
+      gameOn = true;
   }
   if (gameOver) {
     noStroke();
@@ -81,9 +97,9 @@ void draw()
   if (!gameOn) {
     noStroke();
     fill(255, 60);
-    rect(110, 250, 255, 2*txtSize, 3);
+    rect(110, 250, 380, 2*txtSize, 3);
     fill(textColor);
-    text("press 'p' to start playing!", 120, 280);
+    text("press the right button to start playing!", 120, 280);
   }
 }
 
@@ -112,7 +128,7 @@ void keyPressed() {
       piece.inputKey(keyCode);
       break;
     }
-  } else if (keyCode == 80) {// "p"
+  } else if (keyCode == 39) {// "p"
     if(!gameOn){
       initialize();
       //soundGameStart();
@@ -330,10 +346,23 @@ class Piece {
       if(grid.pieceFits()){
         //soundLeftRight();
       }else{
-         x -= 10; 
+         /*x -= 10; 
          while(!grid.pieceFits()){
            x++;
-         }
+         }*/
+         x--;
+      }
+      break;
+    case LEFT:
+      x --;
+      if(grid.pieceFits()){
+        //soundLeftRight();
+      }else{
+         /*x += 10; 
+         while(!grid.pieceFits()){
+           x--;
+         }*/
+         x++;
       }
       break;
     case DOWN:
